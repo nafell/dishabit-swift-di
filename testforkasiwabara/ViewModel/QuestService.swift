@@ -7,6 +7,7 @@
 
 import Foundation
 import Combine
+@testable import testforkasiwabara
 
 // QuestServiceプロトコル - 依存性注入のためのインターフェース
 protocol QuestServiceProtocol {
@@ -14,22 +15,22 @@ protocol QuestServiceProtocol {
     var questSlotsPublisher: AnyPublisher<[QuestSlot], Never> { get }
     
     // 特定のQuestSlotを取得するPublisher
-    func questSlotPublisher(for id: String) -> AnyPublisher<QuestSlot?, Never>
+    func questSlotPublisher(for id: UUID) -> AnyPublisher<QuestSlot?, Never>
     
     // クエストを受注する
-    func acceptQuest(questSlotId: String)
+    func acceptQuest(questSlotId: UUID)
     
     // チケットを使用する
-    func redeemTicket(questSlotId: String)
+    func redeemTicket(questSlotId: UUID)
     
     // タスクの完了状態を切り替える
-    func toggleTaskCompletion(questSlotId: String, taskId: String)
+    func toggleTaskCompletion(questSlotId: UUID, taskId: UUID)
     
     // クエスト完了を報告する
-    func reportQuestCompletion(questSlotId: String)
+    func reportQuestCompletion(questSlotId: UUID)
     
     // 報酬を受け取る
-    func redeemReward(questSlotId: String)
+    func redeemReward(questSlotId: UUID)
 }
 
 // QuestServiceの実装
@@ -47,7 +48,7 @@ class QuestService: QuestServiceProtocol {
     }
     
     // 特定のQuestSlotを取得するPublisher
-    func questSlotPublisher(for id: String) -> AnyPublisher<QuestSlot?, Never> {
+    func questSlotPublisher(for id: UUID) -> AnyPublisher<QuestSlot?, Never> {
         return questSlotsPublisher
             .map { questSlots in
                 questSlots.first { $0.id == id }
@@ -59,49 +60,49 @@ class QuestService: QuestServiceProtocol {
     private func loadSampleData() {
         // サンプルデータの作成
         let tasks1 = [
-            Task(id: "task1", text: "タスク1", objective: Objective(id: "obj1", text: "目標1")),
-            Task(id: "task2", text: "タスク2", objective: Objective(id: "obj2", text: "目標2")),
-            Task(id: "task3", text: "タスク3", objective: nil),
-            Task(id: "task4", text: "タスク4", objective: nil)
+            Task(id: UUID(), text: "タスク1", objective: Objective(id: UUID(), text: "目標1")),
+            Task(id: UUID(), text: "タスク2", objective: Objective(id: UUID(), text: "目標2")),
+            Task(id: UUID(), text: "タスク3", objective: nil),
+            Task(id: UUID(), text: "タスク4", objective: nil)
         ]
         
         let tasks2 = [
-            Task(id: "task5", text: "タスク5", objective: Objective(id: "obj3", text: "目標3")),
-            Task(id: "task6", text: "タスク6", objective: nil),
-            Task(id: "task7", text: "タスク7", objective: nil)
+            Task(id: UUID(), text: "タスク5", objective: Objective(id: UUID(), text: "目標3")),
+            Task(id: UUID(), text: "タスク6", objective: nil),
+            Task(id: UUID(), text: "タスク7", objective: nil)
         ]
         
         let quest1 = Quest(
-            id: "quest1",
+            id: UUID(),
             title: "最初のクエスト",
-            reward: Reward(id: "reward1", text: "アイスクリーム"),
+            reward: Reward(id: UUID(), text: "アイスクリーム"),
             tasks: tasks1
         )
         
         let quest2 = Quest(
-            id: "quest2",
+            id: UUID(),
             title: "2番目のクエスト",
-            reward: Reward(id: "reward2", text: "映画鑑賞"),
+            reward: Reward(id: UUID(), text: "映画鑑賞"),
             tasks: tasks2
         )
         
         let questSlots = [
-            QuestSlot(id: "slot1", quest: quest1, acceptedQuest: nil),
-            QuestSlot(id: "slot2", quest: quest2, acceptedQuest: nil)
+            QuestSlot(id: UUID(), quest: quest1, acceptedQuest: nil),
+            QuestSlot(id: UUID(), quest: quest2, acceptedQuest: nil)
         ]
         
         questSlotsSubject.send(questSlots)
     }
     
     // クエストを受注する
-    func acceptQuest(questSlotId: String) {
+    func acceptQuest(questSlotId: UUID) {
         updateQuestSlot(questSlotId) { questSlot in
             questSlot.acceptQuest()
         }
     }
     
     // チケットを使用する
-    func redeemTicket(questSlotId: String) {
+    func redeemTicket(questSlotId: UUID) {
         updateQuestSlot(questSlotId) { questSlot in
             guard let acceptedQuest = questSlot.acceptedQuest else { return questSlot }
             
@@ -115,7 +116,7 @@ class QuestService: QuestServiceProtocol {
     }
     
     // タスクの完了状態を切り替える
-    func toggleTaskCompletion(questSlotId: String, taskId: String) {
+    func toggleTaskCompletion(questSlotId: UUID, taskId: UUID) {
         updateQuestSlot(questSlotId) { questSlot in
             guard var acceptedQuest = questSlot.acceptedQuest else { return questSlot }
             
@@ -137,7 +138,7 @@ class QuestService: QuestServiceProtocol {
     }
     
     // クエスト完了を報告する
-    func reportQuestCompletion(questSlotId: String) {
+    func reportQuestCompletion(questSlotId: UUID) {
         updateQuestSlot(questSlotId) { questSlot in
             guard let acceptedQuest = questSlot.acceptedQuest else { return questSlot }
             
@@ -152,7 +153,7 @@ class QuestService: QuestServiceProtocol {
     }
     
     // 報酬を受け取る
-    func redeemReward(questSlotId: String) {
+    func redeemReward(questSlotId: UUID) {
         updateQuestSlot(questSlotId) { questSlot in
             guard var acceptedQuest = questSlot.acceptedQuest,
                   acceptedQuest.isAllTaskCompleted else { return questSlot }
@@ -167,7 +168,7 @@ class QuestService: QuestServiceProtocol {
     }
     
     // QuestSlotの更新ヘルパーメソッド
-    private func updateQuestSlot(_ questSlotId: String, updateHandler: (QuestSlot) -> QuestSlot) {
+    private func updateQuestSlot(_ questSlotId: UUID, updateHandler: (QuestSlot) -> QuestSlot) {
         var questSlots = questSlotsSubject.value
         
         if let index = questSlots.firstIndex(where: { $0.id == questSlotId }) {

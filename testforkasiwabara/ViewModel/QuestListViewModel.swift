@@ -28,12 +28,12 @@ class QuestListViewModel: ObservableObject {
     }
     
     // クエストを受注する
-    func acceptQuest(questSlotId: String) {
+    func acceptQuest(questSlotId: UUID) {
         questService.acceptQuest(questSlotId: questSlotId)
     }
 
     // チケットを使用する
-    func redeemTicket(questSlotId: String) {
+    func redeemTicket(questSlotId: UUID) {
         questService.redeemTicket(questSlotId: questSlotId)
     }
     
@@ -49,7 +49,7 @@ class QuestListViewModel: ObservableObject {
     }
     
     // QuestDetailsViewModelを作成
-    func createDetailsViewModel(for questSlotId: String) -> QuestDetailsViewModel {
+    func createDetailsViewModel(for questSlotId: UUID) -> QuestDetailsViewModel {
         return QuestDetailsViewModel(questService: questService, questSlotId: questSlotId)
     }
 }

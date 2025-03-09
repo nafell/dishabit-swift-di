@@ -15,11 +15,11 @@ class QuestDetailsViewModel: ObservableObject {
     
     // 依存サービス
     private let questService: QuestServiceProtocol
-    private let questSlotId: String
+    private let questSlotId: UUID
     private var cancellables = Set<AnyCancellable>()
     
     // 依存性注入を使用したイニシャライザ
-    init(questService: QuestServiceProtocol, questSlotId: String) {
+    init(questService: QuestServiceProtocol, questSlotId: UUID) {
         self.questService = questService
         self.questSlotId = questSlotId
         
@@ -40,7 +40,7 @@ class QuestDetailsViewModel: ObservableObject {
     }
     
     // タスクの完了状態を切り替える
-    func toggleTaskCompletion(taskId: String) {
+    func toggleTaskCompletion(taskId: UUID) {
         questService.toggleTaskCompletion(questSlotId: questSlotId, taskId: taskId)
     }
     

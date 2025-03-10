@@ -6,22 +6,55 @@ protocol AppDataServiceProtocol {
     var tasksPubisher: AnyPublisher<[Task], Never> { get }
     var objectivesPubisher: AnyPublisher<[Objective], Never> { get }
     var dailyQuestBoardPubisher: AnyPublisher<[DailyQuestBoard], Never> { get }
+
+    func editTask(taskId: UUID, newText: String)
 }
 
 class AppDataService: AppDataServiceProtocol {
+    private var cancellables = Set<AnyCancellable>()
+    
     private let activeQuestsSubject = CurrentValueSubject<[Quest], Never>([])
     private let tasksSubject = CurrentValueSubject<[Task], Never>([])
     private let objectivesSubject = CurrentValueSubject<[Objective], Never>([])
-    private let dailyQuestBoardSubject = CurrentValueSubject<[DailyQuestBoard], Never>([])
+    private let dailyQuestBoardsSubject = CurrentValueSubject<[DailyQuestBoard], Never>([])
 
     // ==== Public publishers of lists ====
     var activeQuestsPubisher: AnyPublisher<[Quest], Never> { activeQuestsSubject.eraseToAnyPublisher() }
     var tasksPubisher: AnyPublisher<[Task], Never> { tasksSubject.eraseToAnyPublisher() }
     var objectivesPubisher: AnyPublisher<[Objective], Never> { objectivesSubject.eraseToAnyPublisher() }
-    var dailyQuestBoardPubisher: AnyPublisher<[DailyQuestBoard], Never> { dailyQuestBoardSubject.eraseToAnyPublisher() }
+    var dailyQuestBoardPubisher: AnyPublisher<[DailyQuestBoard], Never> { dailyQuestBoardsSubject.eraseToAnyPublisher() }
     
     init () {
         loadSampleData()
+        // ==== 依存関係にあるデータの変更通知のWaterfallさせる ====
+        // objectives -> tasks -> activeQuests -> dailyQuestBoards
+        
+        // objectives -> tasks
+        objectivesPubisher
+            .receive(on: RunLoop.main)
+            .sink{ [weak self] objectives in
+                guard let self = self else { return }
+                self.activeQuestsSubject.send(self.activeQuestsSubject.value)
+            }
+            .store(in: &cancellables)
+
+        // tasks -> activeQuests
+        tasksPubisher
+            .receive(on: RunLoop.main)
+            .sink { [weak self] tasks in
+                guard let self = self else { return }
+                self.activeQuestsSubject.send(self.activeQuestsSubject.value)
+            }
+            .store(in: &cancellables)
+        
+        // activeQuests -> dailyQuestBoards
+        activeQuestsPubisher
+            .receive(on: RunLoop.main)
+            .sink { [weak self] quests in
+                guard let self = self else { return }
+                self.dailyQuestBoardsSubject.send(self.dailyQuestBoardsSubject.value)
+            }
+            .store(in: &cancellables)
     }
 
     private func loadSampleData() {
@@ -40,31 +73,28 @@ class AppDataService: AppDataServiceProtocol {
         
         // モックの報酬を作成
         let reward1 = Reward(id: UUID(), text: "好きなお菓子を1つ買う")
-        let reward2 = Reward(id: UUID(), text: "1時間ゲームをする")
-        let reward3 = Reward(id: UUID(), text: "映画を見る")
+        let reward2 = Reward(id: UUID(), text: "映画を見る")
         
         // モックのクエストを作成
-        let quest1 = Quest(id: UUID(), title: "健康的な朝習慣", reward: reward1, tasks: [task1, task2])
-        let quest2 = Quest(id: UUID(), title: "勉強タイム", reward: reward2, tasks: [task3])
-        let quest3 = Quest(id: UUID(), title: "運動チャレンジ", reward: reward3, tasks: [task4, task5])
+        let quest1 = Quest(id: UUID(), title: "健康的な朝習慣", reward: reward1, tasks: [task1, task2, task5])
+        let quest2 = Quest(id: UUID(), title: "運動チャレンジ", reward: reward2, tasks: [task4, task5])
         
         // モックのQuestSlotを作成
         let questSlot1 = QuestSlot(id: UUID(), quest: quest1, acceptedQuest: nil)
         let questSlot2 = QuestSlot(id: UUID(), quest: quest2, acceptedQuest: nil)
-        let questSlot3 = QuestSlot(id: UUID(), quest: quest3, acceptedQuest: nil)
         
         // モックのDailyQuestBoardを作成
         let dailyQuestBoard = DailyQuestBoard(
             id: UUID(),
             date: Date(),
-            questSlots: [questSlot1, questSlot2, questSlot3]
+            questSlots: [questSlot1, questSlot2]
         )
         
         // Subjectsを更新
         objectivesSubject.send([objective1, objective2, objective3])
         tasksSubject.send([task1, task2, task3, task4, task5])
-        activeQuestsSubject.send([quest1, quest2, quest3])
-        dailyQuestBoardSubject.send([dailyQuestBoard])
+        activeQuestsSubject.send([quest1, quest2])
+        dailyQuestBoardsSubject.send([dailyQuestBoard])
     }
 
     // ==== Publishers for single items for each list ====
@@ -90,16 +120,26 @@ class AppDataService: AppDataServiceProtocol {
             .eraseToAnyPublisher()
     }
     func dailyQuestBoardPublisher(for id: UUID) ->  AnyPublisher<DailyQuestBoard?, Never> {
-        dailyQuestBoardSubject
+        dailyQuestBoardsSubject
             .map { dailyQuestBoards in
                 dailyQuestBoards.first { $0.id == id }
             }
             .eraseToAnyPublisher()
     }
 
-    init() {
-        
+    // ==== Public methods ====
+    func editTask(taskId: UUID, newText: String) {
+        updateTask(taskId) { task in
+            task.text = newText
+            return task
+        }
     }
-    
 
+    private func updateTask(_ taskId: UUID, updateHandler: (Task) -> Task) {
+        var tasks = tasksSubject.value
+        if let index = tasks.firstIndex(where: { $0.id == taskId }) {
+            tasks[index] = updateHandler(tasks[index])
+            tasksSubject.send(tasks)
+        }
+    }
 }

@@ -1,23 +1,25 @@
-//
-//  QuestSlot.swift
-//  testforkasiwabara
-//
-//  Created by 長峯幸佑 on 2025/03/06.
-//
-
 import Foundation
 
-// タスク定義
-
-struct Objective: Codable {
-    var id: String
+class Objective: Identifiable {
+    var id: UUID
     var text: String
+
+    init(id: UUID, text: String) {
+        self.id = id
+        self.text = text
+    }
 }
 
-struct Task: Identifiable {
-    var id: String
+class Task: Identifiable {
+    var id: UUID
     var text: String
     var objective: Objective?
+
+    init(id: UUID, text: String, objective: Objective?) {
+        self.id = id
+        self.text = text
+        self.objective = objective
+    }
 }
 
 // 受注済みタスク定義
@@ -26,7 +28,7 @@ struct AcceptedTask: Identifiable {
     var isCompleted: Bool = false
     
     // 元のTaskのプロパティにアクセスするための転送プロパティ
-    var id: String { originalTask.id }
+    var id: UUID { originalTask.id }
     var text: String { originalTask.text }
     var objective: Objective? { originalTask.objective }
     
@@ -39,11 +41,18 @@ struct AcceptedTask: Identifiable {
 }
 
 // 未受注のクエスト
-struct Quest: Identifiable {
-    var id: String
+class Quest: Identifiable {
+    var id: UUID
     var title: String
     var reward: Reward
     var tasks: [Task]
+
+    init(id: UUID, title: String, reward: Reward, tasks: [Task]) {
+        self.id = id
+        self.title = title
+        self.reward = reward
+        self.tasks = tasks
+    }
     
     // AcceptedQuestを生成するメソッド
     func accept() -> AcceptedQuest {
@@ -59,8 +68,9 @@ struct Quest: Identifiable {
     }
 }
 
+// 受注済みクエスト
 struct AcceptedQuest: Identifiable {
-    var id: String
+    var id: UUID
     var title: String
     var reward: RedeemableReward // 変更: RewardからRedeemableRewardに
     var acceptedTasks: [AcceptedTask]
@@ -95,7 +105,7 @@ struct AcceptedQuest: Identifiable {
 }
 // QuestSlot定義
 struct QuestSlot: Identifiable {
-    var id: String
+    var id: UUID
     var quest: Quest
     var acceptedQuest: AcceptedQuest?
     
@@ -113,9 +123,16 @@ struct QuestSlot: Identifiable {
     }
 }
 
+// 日次クエストリスト
+struct DailyQuestBoard: Identifiable {
+    var id: UUID
+    var date: Date
+    var questSlots: [QuestSlot]
+}
+
 // ごほうびメニューアイテム
 struct Reward: Identifiable {
-    var id: String
+    var id: UUID
     var text: String
 }
 
@@ -127,7 +144,7 @@ struct RedeemableReward: Identifiable {
     var redeemedDate: Date?
     
     // 元のRewardのプロパティにアクセスするための転送プロパティ
-    var id: String { originalReward.id }
+    var id: UUID { originalReward.id }
     var text: String { originalReward.text }
     
     // ごほうびを使用済みとしてマークする

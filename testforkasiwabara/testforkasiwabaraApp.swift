@@ -15,7 +15,7 @@ struct testforkasiwabaraApp: App {
     var body: some Scene {
         WindowGroup {
             // QuestServiceを注入してQuestListViewを初期化
-            QuestListView(viewModel: QuestListViewModel(questService: questService))
+            QuestListView(viewModel: QuestListViewModel(appDataService: AppDataService()))
         }
     }
 }
